@@ -1,0 +1,65 @@
+# Составление фондового индекса
+# Метод главных компонент (principal component analysis, PCA) — это один
+# из методов обучения без учителя, который позволяет сформировать но-
+# вые признаки, являющиеся линейными комбинациями старых.
+# При этом новые признаки строятся так, чтобы сохранить как можно больше дисперсии в данных.
+# Иными словами, метод главных компонент понижает размерность данных оптимальным с точки зрения сохранения дисперсии
+# способом.
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+# рассмотрим датасет с фондовыми индексами различных компаний
+data = pd.read_csv("close_prices.csv")
+X = data.drop(columns=['date'])
+companies = X.columns
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+print("X_scaled.shape = {}".format(X_scaled.shape))
+
+pca = PCA(n_components=10)
+pca.fit(X_scaled)
+
+# Переменная explained_variance содержит коэффициенты дисперсии для каждого основного компонента
+# дисперсии последовательно складываются
+# когда сумма достигнет 90% - количество слагаемых и будет количеством компонент,
+# достаточных для объяснения 90% дисперсии
+explained_variance = pca.explained_variance_ratio_
+print("explained_variance:\n{}".format(explained_variance))
+
+# посмотрим как растет процент объясняемой дисперсии
+summa = 0.
+for component in range(0, len(explained_variance)):
+    summa = summa + explained_variance[component]
+    print("{0} components explore {1:1.2f}% of dispersion".format(component+1, summa*100))
+
+# выполним преобразование
+X_pca = pca.transform(X_scaled)
+print("X_pca.shape = {}\n".format(X_pca.shape))
+X_pca0 = X_pca[:, :1] # значение первой преобразованной компоненты
+print("X_pca0.shape = {}\n".format(X_pca0.shape))
+
+# Загрузим индексы Доу-Джонса для компаний
+data_dd = pd.read_csv("djia_index.csv")
+X_dd = data_dd.drop(columns=['date'])
+X_dd_scaled = scaler.fit_transform(X_dd)
+print("X_dd_scaled.shape = {}\n".format(X_dd_scaled.shape))
+
+# По умолчанию numpy np.corrcoef принимает построчную корреляцию двух матриц
+# корреляция по столбцам - rowvar аргумент
+my_rho = np.corrcoef(X_pca0, X_dd_scaled, rowvar=False)
+print("my_rho = \n{}".format(my_rho))
+print("Pirson_corr = {}".format(my_rho[0, 1]))
+
+ev_max = max(explained_variance)
+print("\nExplained_variance:\n{}".format(explained_variance))
+print("\nCompanies:\n{}".format(companies))
+company_max = str()
+index0_max = -100.
+
+for ind in range(0, len(companies)):
+    if X_pca[ind:ind+1, :1] > index0_max:
+        index0_max = X_pca[ind:ind+1, :1]
+        company_max = companies[ind]
+print("Company {0} has max index[0] : {1}".format(company_max, index0_max))
