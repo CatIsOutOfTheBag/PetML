@@ -1,0 +1,63 @@
+from sklearn import datasets
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import KFold
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+import numpy as np
+
+# Загрузим новостной датасет про космос и про атеизм
+#  посмотрим как можно работать с текстами
+newsgroups = datasets.fetch_20newsgroups(
+                    subset='all',
+                    categories=['alt.atheism', 'sci.space']
+             )
+X_train = newsgroups.data # массив с текстами
+y_train = newsgroups.target # номер класса
+
+#  Вычислим TF-IDF-признаки для всех текстов
+# Одна из сложностей работы с текстовыми данными состоит в том,
+# что для них нужно построить числовое представление.
+# Одним из способов нахождения такого представления является
+# вычисление TF-IDF. В Scikit-Learn это реализовано в классе
+# sklearn.feature_extraction.text.TfidfVectorizer.
+
+vectorizer = TfidfVectorizer()
+X_vectorized = vectorizer.fit_transform(X_train)
+words = vectorizer.get_feature_names_out()
+# X_vectorized это
+# (_, _) - нумерация слова (текст, номер слова в словаре),
+# а число во втором столбце - Матрица частоты слов IFIDF
+# нумерацию слова в словаре можно посмотреть в vectorizer.vocabulary_
+
+# Теперь подберем минимальный лучший параметр C из множества
+# [10^-5, 10^-4, ... 10^4, 10^5] для SVM с линейным ядром (kernel='linear')
+# при помощи кросс-валидации по 5 блокам.
+# В качестве меры качества используем долю верных ответов (accuracy).
+
+# Для перебора параметров используем GridSearchCV
+grid = {'C': np.power(10.0, np.arange(-5, 6))}
+cv = KFold(n_splits=5, shuffle=True, random_state=241)
+clf = SVC(kernel='linear', random_state=241)
+gs = GridSearchCV(clf, grid, scoring='accuracy', cv=cv)
+gs.fit(X_vectorized, y_train)
+bestC = gs.best_estimator_.C #минимальный лучший параметр C
+print("bestC = {}".format(bestC))
+
+# Обучим SVM по всей выборке с найденным оптимальным параметром C
+clf = SVC(kernel='linear', random_state=241, C=bestC)
+results = clf.fit(X_vectorized, y_train)
+
+# Найдем 10 слов с наибольшим абсолютным значением веса
+# посмотрим на них в лексикографическом порядке
+weights = []
+for element in results.coef_.T:
+    weights.append(abs(element[0]))
+pairs = dict(zip(words, weights)) # парочки слово:вес
+# сортировка по весу по убыванию
+sorted_pairs = dict(sorted(pairs.items(), key=lambda x: x[1], reverse=True))
+# отбор 10 лучших слов, в список сразу с понижением регистра
+best_ten = []
+for key, value in sorted_pairs.items():
+    best_ten.append(key.lower())
+# сортировка лучших в лексикографическом порядке
+print(sorted(best_ten[:10]))
