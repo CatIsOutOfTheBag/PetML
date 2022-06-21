@@ -1,0 +1,36 @@
+# задача регрессии
+# предсказание стоимости жилья на основе различных характеристик расположения
+# загрязненность воздуха, близость к дорогам и т.д.
+
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn import preprocessing
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+import pandas as pd
+import numpy as np
+
+data_url = "http://lib.stat.cmu.edu/datasets/boston"
+raw_df = pd.read_csv(data_url, sep="\s+", skiprows=22, header=None)
+data = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
+target = raw_df.values[1::2, 2]
+
+X = pd.DataFrame(data)
+y = pd.DataFrame(target)
+# отмасштабированные признаки
+# каждый столбец матрицы признаков имеет
+# нулевое среднее значение и стандартное отклонение
+X = pd.DataFrame(preprocessing.scale(X))
+
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+scores_results = []
+parameters = np.linspace(1, 10, num=200)
+# Посмотрим как степень p в метрике 'minkowski' влияет на показатель качества
+for p in parameters:
+    neigh = KNeighborsRegressor(n_neighbors=5, weights='distance', metric='minkowski', p=p)
+    # вычисляется качество метрического метода k ближайших соседей
+    scores = cross_val_score(estimator=neigh, X=X, y=y, cv=kf, scoring='neg_mean_squared_error')
+    scores_results.append(scores.mean())
+
+print(scores_results)
+print('p = ', scores_results.index(max(scores_results))+1)
+print('scores_max = ', max(scores_results))
