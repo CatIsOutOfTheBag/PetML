@@ -1,0 +1,42 @@
+# работа с персептроном - простейшим вариантом линейного классификатора
+# качество линейной модели повышается путем нормализации признаков
+# один из способов нормализации - стандартизация признаков.
+# берется набор значений признака на всех объектах. вычисляется среднее значение и стандартное отклонение
+# из всех значений признака вычитается среднее и полученная разность делится на стандартное отклонение
+
+# посмотрим, как растет качество
+
+# импорт необходимых библиотек
+from sklearn.linear_model import Perceptron # собственно Персептрон
+from sklearn.preprocessing import StandardScaler # класс стандартизации признаков
+from sklearn.metrics import accuracy_score # точность классификации - простейшая метрика
+import pandas as pd
+
+#загрузка обучающущей и тестовой выборки
+data_train = pd.read_csv('perceptron-train.csv', delimiter=',', header=None)
+X_train = data_train.iloc[:, 1:3]
+y_train = data_train.iloc[:, 0]
+
+data_test = pd.read_csv('perceptron-test.csv', delimiter=',', header=None)
+X_test = data_test.iloc[:, 1:3]
+y_test = data_test.iloc[:, 0]
+
+clf = Perceptron(random_state=241) # создание объекта Perceptron
+clf.fit(X_train, y_train) # обучение классификатора
+predic = clf.predict(X_test) # предсказание на тестовой выборке
+acs = accuracy_score(y_test, predic) # вычисление метрики качества
+print(acs)
+
+# а теперь все вместе дружно еще разок, но с применением стандартизации
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+clf.fit(X_train_scaled, y_train)
+predic = clf.predict(X_test_scaled)
+acs_scaled = accuracy_score(y_test, predic)
+
+print(acs_scaled)
+print(abs(acs-acs_scaled))
+
+# профит!
+
