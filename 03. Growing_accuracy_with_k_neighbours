@@ -1,0 +1,47 @@
+# подбор наилучшего числа соседей
+# решение задачи классификации сортов вин
+
+# в этой задаче поищем оптимально число соседей для метода К-ближайших
+# и посмотрим как будет вести себя метрика качества accuracy
+import pandas as pd
+from sklearn.model_selection import KFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn import preprocessing
+
+def GetKNeighborsClassifierMaxValScore(X):
+    # генератор разбиений задает набор разбиений на обучение и валидацию
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    scores_results = []
+    for k in range(1, 51):
+        neigh = KNeighborsClassifier(n_neighbors=k)
+        # вычисляется качество метрического метода классификации
+        scores = cross_val_score(estimator=neigh, X=X, y=y, cv=kf, scoring='accuracy')
+        scores_results.append(scores.mean())
+    # возвращается результат максимальный результат и количество ближайших соседей,
+    # на котором он был достигнут
+    return max(scores_results), scores_results.index(max(scores_results))+1
+
+
+# загрузим датасет
+data = pd.read_csv('wine.data', delimiter=',', names=['Class', 'w1', 'w2', 'w3',
+                   'w4', 'w5', 'w6',
+                   'w7', 'w8', 'w9',
+                   'w10', 'w11', 'w12', 'w13'])
+# отделим таргет
+X = data.loc[:, 'w1':'w13']
+y = data.loc[:, 'Class']
+
+# непричесанные признаки
+maximum, ind = GetKNeighborsClassifierMaxValScore(X)
+print('maximum = ', maximum)
+print('ind = ', ind)
+
+# отмасштабированные признаки
+# каждый столбец матрицы признаков имеет
+# нулевое среднее значение и стандартное отклонение
+X = pd.DataFrame(preprocessing.scale(X))
+maximum_preprocessed, ind_preprocessed = GetKNeighborsClassifierMaxValScore(X)
+print('\nmaximum_preprocessed = ', maximum_preprocessed)
+print('ind_preprocessed = ', ind_preprocessed)
+# Профит!
